@@ -23,6 +23,8 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
@@ -417,5 +419,73 @@ public class CardListView extends ListView implements CardView.OnExpandListAnima
                 }
             }
         }
+    }
+
+    @Override
+    public Parcelable onSaveInstanceState() {
+        final Parcelable superState = super.onSaveInstanceState();
+        final ListAdapter adapter = getAdapter();
+        final boolean usingArray = adapter instanceof CardArrayAdapter;
+        final int size = usingArray ? adapter.getCount() : 0;
+        final byte[] states = new byte[size];
+        // saving the states
+        if (usingArray) {
+            CardArrayAdapter baseAdapter = (CardArrayAdapter) adapter;
+            for (int i=0; i < size; i++) {
+                final Card card = baseAdapter.getItem(i);
+                states[i] = (byte) (card.isExpanded() ? 1 : 0);
+            }
+        }
+        return new SavedListState(superState, states);
+    }
+
+    @Override
+    public void onRestoreInstanceState(final Parcelable state) {
+        SavedListState savedListState = (SavedListState) state;
+        super.onRestoreInstanceState(savedListState.getSuperState());
+        final ListAdapter adapter = getAdapter();
+        final boolean usingArray = adapter instanceof CardArrayAdapter;
+        if (usingArray) {
+            CardArrayAdapter baseAdapter = (CardArrayAdapter) adapter;
+            int i = 0;
+            for (byte cardState : savedListState.mStates) {
+                final Card card = baseAdapter.getItem(i++);
+                card.setExpanded(cardState != 0);
+            }
+        }
+    }
+
+    public static class SavedListState extends BaseSavedState {
+        final byte[] mStates;
+        private SavedListState(final Parcelable superState, final byte[] states) {
+            super(superState);
+            mStates = states;
+        }
+
+        private SavedListState(final Parcel in) {
+            super(in);
+            final int size = in.readInt();
+            mStates = new byte[size];
+            in.readByteArray(mStates);
+        }
+
+        @Override
+        public void writeToParcel(final Parcel dest, final int flags) {
+            super.writeToParcel(dest, flags);
+            dest.writeInt(mStates.length);
+            dest.writeByteArray(mStates);
+        }
+
+        public static final Parcelable.Creator<SavedListState> CREATOR = new Creator<SavedListState>() {
+            @Override
+            public SavedListState createFromParcel(final Parcel source) {
+                return new SavedListState(source);
+            }
+
+            @Override
+            public SavedListState[] newArray(final int size) {
+                return new SavedListState[size];
+            }
+        };
     }
 }
