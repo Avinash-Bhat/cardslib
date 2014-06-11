@@ -28,6 +28,8 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.ViewGroup;
@@ -962,4 +964,54 @@ public class CardView extends BaseCardView {
             }
         }
     }
+
+    @Override
+    protected Parcelable onSaveInstanceState() {
+        final Parcelable superState = super.onSaveInstanceState();
+        return new SavedState(superState, isExpanded());
+    }
+
+    @Override
+    protected void onRestoreInstanceState(final Parcelable state) {
+        SavedState savedState = (SavedState) state;
+        super.onRestoreInstanceState(savedState.getSuperState());
+
+        setExpanded(savedState.mExpanded);
+        // TODO maybe this can be a bit better?
+        setupExpandAction();
+    }
+
+    private static class SavedState extends BaseSavedState {
+        final boolean mExpanded;
+
+        private SavedState(final Parcelable superState, final boolean expanded) {
+            super(superState);
+            mExpanded = expanded;
+        }
+
+        private SavedState(final Parcel in) {
+            super(in);
+            mExpanded = (in.readByte() != 0);
+        }
+
+        @Override
+        public void writeToParcel(final Parcel dest, final int flags) {
+            super.writeToParcel(dest, flags);
+            dest.writeByte((byte) (mExpanded ? 1 : 0));
+        }
+
+        public static final Parcelable.Creator<SavedState> CREATOR = new Creator<SavedState>() {
+
+            @Override
+            public SavedState createFromParcel(final Parcel source) {
+                return new SavedState(source);
+            }
+
+            @Override
+            public SavedState[] newArray(final int size) {
+                return new SavedState[size];
+            }
+        };
+    }
+
 }
